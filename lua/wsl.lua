@@ -252,6 +252,61 @@ M.fix_path = function(file_path)
   return file_path
 end
 
+-- Set Windows directories as primary search paths for Telescope
+M.set_windows_search_paths = function()
+  if pcall(require, "telescope") then
+    local telescope = require("telescope")
+    local actions = require("telescope.actions")
+    local action_state = require("telescope.actions.state")
+    
+    -- Configure Telescope to prefer Windows paths
+    telescope.setup({
+      defaults = {
+        file_ignore_patterns = {
+          -- Exclude common Linux system directories
+          "^/bin/", "^/boot/", "^/dev/", "^/etc/", "^/lib/", "^/opt/",
+          "^/proc/", "^/run/", "^/sbin/", "^/srv/", "^/sys/", "^/tmp/",
+          "^/usr/", "^/var/",
+          -- Don't exclude /mnt/ since that's where Windows drives are mounted
+        },
+        path_display = function(_, path)
+          -- If path is a Windows path through /mnt, make it more readable
+          if path:match("^/mnt/[a-zA-Z]/") then
+            local drive, rest = path:match("^/mnt/([a-zA-Z])/(.*)")
+            return drive:upper() .. ":\\" .. rest:gsub("/", "\\")
+          end
+          return path
+        end,
+      },
+    })
+    
+    -- Override find_files to default to Windows home if no path specified
+    local builtin = require("telescope.builtin")
+    local original_find_files = builtin.find_files
+    
+    builtin.find_files = function(opts)
+      opts = opts or {}
+      if not opts.cwd then
+        opts.cwd = M.get_windows_home()
+        opts.prompt_title = "Windows Files"
+      end
+      return original_find_files(opts)
+    end
+    
+    -- Override live_grep to default to Windows home if no path specified
+    local original_live_grep = builtin.live_grep
+    
+    builtin.live_grep = function(opts)
+      opts = opts or {}
+      if not opts.cwd then
+        opts.cwd = M.get_windows_home()
+        opts.prompt_title = "Grep Windows Files"
+      end
+      return original_live_grep(opts)
+    end
+  end
+end
+
 -- Set up WSL-specific mappings
 M.setup = function()
   if not M.is_wsl() then
@@ -276,6 +331,18 @@ M.setup = function()
   -- Improve netrw to work with Windows paths when browsing
   vim.g.netrw_cygwin = 0
   vim.g.netrw_scp_cmd = "scp -q"
+  
+  -- Start in Windows home directory by default
+  local win_home = M.get_windows_home()
+  if vim.fn.isdirectory(win_home) == 1 then
+    vim.cmd('cd ' .. win_home)
+    vim.notify("Starting in Windows home directory: " .. win_home, vim.log.levels.INFO)
+  end
+  
+  -- Configure Telescope to prioritize Windows paths
+  vim.schedule(function()
+    M.set_windows_search_paths()
+  end)
   
   -- Register with which-key if available
   if pcall(require, "which-key") then
@@ -308,24 +375,29 @@ M.setup = function()
     vim.keymap.set("n", "<leader>wb", M.browse_windows_desktop, { desc = "Browse Windows Desktop" })
   end
   
-  -- Hook into Telescope if available to enhance Windows file browsing
-  if pcall(require, "telescope") then
-    local telescope = require("telescope")
-    -- Add Windows path handling to Telescope
-    telescope.setup({
-      defaults = {
-        file_sorter = require("telescope.sorters").get_fzy_sorter,
-        path_display = { "truncate" },
-      },
-      extensions = {
-        -- Add Windows-friendly path display
-        path_display = function(_, path)
-          local rel_path = require("plenary.path"):new(path):make_relative(vim.fn.getcwd())
-          return rel_path
-        end,
-      },
-    })
-  end
+  -- Override <leader>ff to search in Windows home
+  vim.keymap.set("n", "<leader>ff", M.browse_windows_files, { desc = "Find Windows files" })
+  
+  -- Override <leader>fg to grep in Windows home
+  vim.keymap.set("n", "<leader>fg", function()
+    if pcall(require, "telescope") and pcall(require, "telescope.builtin") then
+      require('telescope.builtin').live_grep({
+        prompt_title = "Grep Windows Files",
+        cwd = M.get_windows_home(),
+      })
+    end
+  end, { desc = "Grep Windows files" })
+  
+  -- Add autocmd to always start in Windows directory when creating a new buffer
+  vim.api.nvim_create_autocmd("BufNew", {
+    pattern = "*",
+    callback = function()
+      local cwd = vim.fn.getcwd()
+      if not cwd:match("^/mnt/") then
+        M.goto_windows_home()
+      end
+    end,
+  })
 end
 
 return M

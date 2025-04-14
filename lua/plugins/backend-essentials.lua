@@ -1196,19 +1196,35 @@ return {
         end
       end, { nargs = "?" })
       
-      vim.api.nvim_create_user_command("DevdocsOpen", function(opts)
-        if opts.args and opts.args ~= "" then
-          pcall(vim.cmd, "DevdocsOpen " .. vim.fn.shellescape(opts.args))
-        else
-          pcall(vim.cmd, "DevdocsOpen")
+      -- Fix DevdocsOpen: Don't create a circular reference
+      vim.api.nvim_create_user_command("DevdocsOpenCmd", function(opts)
+        local success, err = pcall(function()
+          if opts.args and opts.args ~= "" then
+            -- Call the native command directly without our wrapper
+            vim.cmd("DevdocsOpen " .. vim.fn.shellescape(opts.args))
+          else
+            vim.cmd("DevdocsOpen")
+          end
+        end)
+        
+        if not success then
+          vim.notify("DevDocs error: " .. tostring(err), vim.log.levels.ERROR)
         end
       end, { nargs = "?" })
       
-      vim.api.nvim_create_user_command("DevdocsOpenFloat", function(opts)
-        if opts.args and opts.args ~= "" then
-          pcall(vim.cmd, "DevdocsOpenFloat " .. vim.fn.shellescape(opts.args))
-        else
-          pcall(vim.cmd, "DevdocsOpenFloat")
+      -- Fix DevdocsOpenFloat: Don't create a circular reference
+      vim.api.nvim_create_user_command("DevdocsOpenFloatCmd", function(opts)
+        local success, err = pcall(function()
+          if opts.args and opts.args ~= "" then
+            -- Call the native command directly without our wrapper
+            vim.cmd("DevdocsOpenFloat " .. vim.fn.shellescape(opts.args))
+          else
+            vim.cmd("DevdocsOpenFloat")
+          end
+        end)
+        
+        if not success then
+          vim.notify("DevDocs error: " .. tostring(err), vim.log.levels.ERROR)
         end
       end, { nargs = "?" })
       
@@ -1218,7 +1234,8 @@ return {
         else
           -- Fallback if search function is not available
           vim.notify("Search function not available in this version", vim.log.levels.WARN)
-          pcall(vim.cmd, "DevdocsOpen")
+          -- Use our fixed command
+          vim.cmd("DevdocsOpenCmd")
         end
       end, {})
     end,

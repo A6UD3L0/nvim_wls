@@ -459,7 +459,7 @@ M._toggle_documentation = function()
   local ft = vim.bo.filetype
   if ft == "" then
     -- No filetype, just open general docs
-    vim.cmd("DevdocsOpenFloat")
+    vim.cmd("DevdocsOpenCmd")
     return
   end
   
@@ -501,7 +501,7 @@ M._toggle_documentation = function()
   local doc_type = ft_map[ft] or specialized_docs[ft] or ft
   
   -- Try to open documentation for the specific filetype
-  local success = pcall(vim.cmd, "DevdocsOpenFloat " .. vim.fn.shellescape(doc_type))
+  local success = pcall(vim.cmd, "DevdocsOpenFloatCmd " .. vim.fn.shellescape(doc_type))
   
   -- If it fails, try to install the documentation
   if not success then
@@ -510,7 +510,7 @@ M._toggle_documentation = function()
     vim.defer_fn(function()
       pcall(vim.cmd, "DevdocsInstall " .. vim.fn.shellescape(doc_type))
       vim.defer_fn(function()
-        pcall(vim.cmd, "DevdocsOpenFloat " .. vim.fn.shellescape(doc_type))
+        pcall(vim.cmd, "DevdocsOpenFloatCmd " .. vim.fn.shellescape(doc_type))
       end, 2000)
     end, 1000)
   end
@@ -544,7 +544,7 @@ M._open_ml_docs = function(doc_type)
   local target_doc = ml_docs[doc_type] or doc_type
   
   -- Try to open documentation
-  local success = pcall(vim.cmd, "DevdocsOpenFloat " .. vim.fn.shellescape(target_doc))
+  local success = pcall(vim.cmd, "DevdocsOpenFloatCmd " .. vim.fn.shellescape(target_doc))
   
   -- If failed, try to install the documentation
   if not success then
@@ -553,7 +553,7 @@ M._open_ml_docs = function(doc_type)
     vim.defer_fn(function()
       pcall(vim.cmd, "DevdocsInstall " .. vim.fn.shellescape(target_doc))
       vim.defer_fn(function()
-        pcall(vim.cmd, "DevdocsOpenFloat " .. vim.fn.shellescape(target_doc))
+        pcall(vim.cmd, "DevdocsOpenFloatCmd " .. vim.fn.shellescape(target_doc))
       end, 2000)
     end, 1000)
   end
@@ -883,7 +883,7 @@ map("n", "<leader>do", function() M._toggle_documentation() end, { desc = "Toggl
 
 map("n", "<leader>dO", function()
   if M._has_plugin("nvim-devdocs") then
-    vim.cmd("DevdocsOpen")
+    vim.cmd("DevdocsOpenCmd")
   else
     vim.notify("DevDocs plugin not found. Please install luckasRanarison/nvim-devdocs", vim.log.levels.ERROR)
   end

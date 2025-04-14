@@ -3,6 +3,7 @@ return {
   -- LSP Configuration
   {
     "neovim/nvim-lspconfig",
+    version = "0.1.7", -- Pinning to a version compatible with Neovim 0.9.5
     dependencies = {
       "williamboman/mason.nvim",
       "williamboman/mason-lspconfig.nvim",
@@ -598,7 +599,23 @@ return {
       },
       renderer = {
         highlight_git = true,
-        indent_markers = { enable = true },
+        root_folder_label = function(path)
+          -- Customize root folder display for Windows/WSL integration
+          local wsl = require("wsl")
+          if wsl.is_wsl() and path:match("^/mnt/") then
+            local windows_path = wsl.to_windows_path(path)
+            return windows_path
+          end
+          return path
+        end,
+        special_files = { "README.md", "Makefile", "MAKEFILE", ".gitignore" },
+      },
+      filesystem_watchers = {
+        enable = true,
+      },
+      update_focused_file = {
+        enable = true,
+        update_root = true,
       },
     },
   },
@@ -733,6 +750,7 @@ return {
   -- Which-key for keybinding help
   {
     "folke/which-key.nvim",
+    version = "v1.5.1", -- Pin to a version compatible with Neovim 0.9.5
     event = "VeryLazy",
     config = function()
       local wk = require("which-key")
@@ -885,6 +903,7 @@ return {
   -- Github Copilot
   {
     "zbirenbaum/copilot.lua",
+    enabled = false, -- Disable Copilot until Node.js is updated to v20+
     cmd = "Copilot",
     event = "InsertEnter",
     config = function()
@@ -897,6 +916,7 @@ return {
   
   {
     "zbirenbaum/copilot-cmp",
+    enabled = false, -- Disable Copilot-cmp until Node.js is updated to v20+
     version = "*", -- Use latest release version to fix deprecation warnings
     dependencies = { "zbirenbaum/copilot.lua" },
     config = function()

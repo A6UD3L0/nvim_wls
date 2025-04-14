@@ -15,10 +15,19 @@ end)()
 -- WSL specific settings
 local wsl_paths = {
   windows_home = (function()
-    local candidates = {
-      "/mnt/c/Users/" .. os.getenv("USER"),
-      "/mnt/c/Users/" .. os.getenv("USERNAME"),
-    }
+    local candidates = {}
+    
+    -- Only add paths with non-nil environment variables
+    if os.getenv("USER") then
+      table.insert(candidates, "/mnt/c/Users/" .. os.getenv("USER"))
+    end
+    
+    if os.getenv("USERNAME") then
+      table.insert(candidates, "/mnt/c/Users/" .. os.getenv("USERNAME"))
+    end
+    
+    -- Add a fallback option
+    table.insert(candidates, "/mnt/c/Users")
     
     for _, path in ipairs(candidates) do
       if vim.fn.isdirectory(path) == 1 then
@@ -486,7 +495,7 @@ vim.api.nvim_create_autocmd("FileType", {
     elseif vim.bo.filetype == "python" then
       vim.opt_local.colorcolumn = "88" -- Black formatter uses 88 characters
     end
-  end,
+  end
 })
 
 -- Ensure terminal opens in the bottom center

@@ -476,6 +476,7 @@ return {
     config = function()
       local telescope = require("telescope")
       local actions = require("telescope.actions")
+      local wsl_utils = require("wsl")
       
       telescope.setup({
         defaults = {
@@ -505,7 +506,14 @@ return {
             "%.7z",
             "%.so",
           },
-          path_display = { "truncate" },
+          path_display = { 
+            "truncate",
+            -- Format the path display for WSL/Windows paths
+            shorten = {
+              len = 2, 
+              exclude = {1, -1},
+            },
+          },
           sorting_strategy = "ascending",
           layout_config = {
             horizontal = {
@@ -520,7 +528,14 @@ return {
         pickers = {
           find_files = {
             hidden = true, -- Show hidden files
-            find_command = { "fd", "--type", "f", "--strip-cwd-prefix" },
+            -- If in WSL, use a different find command that works better with Windows files
+            find_command = function()
+              if wsl_utils.is_wsl() then
+                return { "find", ".", "-type", "f", "-not", "-path", "*/\\.git/*", "-not", "-path", "*/node_modules/*" }
+              else
+                return { "fd", "--type", "f", "--strip-cwd-prefix" }
+              end
+            end,
           },
           live_grep = {
             additional_args = function()
@@ -539,6 +554,45 @@ return {
       })
       
       telescope.load_extension("fzf")
+      
+      -- Register Windows file browser command
+      vim.api.nvim_create_user_command("TelescopeWindowsHome", function()
+        if wsl_utils.is_wsl() then
+          local windows_home = wsl_utils.to_wsl_path("C:\\Users")
+          require("telescope.builtin").find_files({
+            prompt_title = "Windows Home",
+            cwd = windows_home,
+          })
+        else
+          vim.notify("Not running in WSL", vim.log.levels.WARN)
+        end
+      end, {})
+      
+      -- Add Windows files quick access
+      vim.keymap.set("n", "<leader>fw", function()
+        if wsl_utils.is_wsl() then
+          local windows_home = wsl_utils.to_wsl_path("C:\\Users")
+          require("telescope.builtin").find_files({
+            prompt_title = "Windows Files",
+            cwd = windows_home,
+          })
+        else
+          vim.notify("Not running in WSL", vim.log.levels.WARN)
+        end
+      end, { desc = "Find Windows files" })
+      
+      -- Add Windows C drive quick access
+      vim.keymap.set("n", "<leader>fc", function()
+        if wsl_utils.is_wsl() then
+          local c_drive = "/mnt/c"
+          require("telescope.builtin").find_files({
+            prompt_title = "C Drive",
+            cwd = c_drive,
+          })
+        else
+          vim.notify("Not running in WSL", vim.log.levels.WARN)
+        end
+      end, { desc = "Browse C Drive" })
     end,
   },
   
@@ -572,52 +626,65 @@ return {
       { "<leader>e", "<cmd>NvimTreeToggle<CR>", desc = "Toggle file explorer" },
       { "<leader>ef", "<cmd>NvimTreeFocus<CR>", desc = "Focus file explorer" },
     },
-    opts = {
-      filters = { dotfiles = false },
-      disable_netrw = true,
-      hijack_netrw = true,
-      hijack_cursor = true,
-      git = { enable = true, ignore = false },
-      view = {
-        width = 30, -- Match the width of undotree
-        side = "left", -- Position on the left side
-        preserve_window_proportions = true, -- Keep editing window large
-        signcolumn = "yes",
-      },
-      actions = {
-        open_file = {
-          resize_window = true, -- Resize the window upon file open
-          window_picker = {
-            enable = true,
-            chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-            exclude = {
-              filetype = { "notify", "packer", "qf", "diff", "fugitive", "fugitiveblame" },
-              buftype = { "terminal", "help" },
+    config = function()
+      -- Load WSL utilities
+      local wsl_utils = require("wsl")
+      
+      require("nvim-tree").setup({
+        filters = { dotfiles = false },
+        disable_netrw = true,
+        hijack_netrw = true,
+        hijack_cursor = true,
+        git = { enable = true, ignore = false },
+        view = {
+          width = 30, -- Match the width of undotree
+          side = "left", -- Position on the left side
+          preserve_window_proportions = true, -- Keep editing window large
+          signcolumn = "yes",
+        },
+        actions = {
+          open_file = {
+            resize_window = true, -- Resize the window upon file open
+            window_picker = {
+              enable = true,
+              chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+              exclude = {
+                filetype = { "notify", "packer", "qf", "diff", "fugitive", "fugitiveblame" },
+                buftype = { "terminal", "help" },
+              },
             },
           },
         },
-      },
-      renderer = {
-        highlight_git = true,
-        root_folder_label = function(path)
-          -- Customize root folder display for Windows/WSL integration
-          local wsl = require("wsl")
-          if wsl.is_wsl() and path:match("^/mnt/") then
-            local windows_path = wsl.to_windows_path(path)
-            return windows_path
-          end
-          return path
-        end,
-        special_files = { "README.md", "Makefile", "MAKEFILE", ".gitignore" },
-      },
-      filesystem_watchers = {
-        enable = true,
-      },
-      update_focused_file = {
-        enable = true,
-        update_root = true,
-      },
-    },
+        renderer = {
+          highlight_git = true,
+          root_folder_label = function(path)
+            -- Customize root folder display for Windows/WSL integration
+            if wsl_utils.is_wsl() and path:match("^/mnt/") then
+              local windows_path = wsl_utils.to_windows_path(path)
+              return windows_path
+            end
+            return path
+          end,
+          indent_markers = { enable = true },
+          icons = {
+            show = {
+              file = true,
+              folder = true,
+              folder_arrow = true,
+              git = true,
+            },
+          },
+          special_files = { "README.md", "Makefile", "MAKEFILE", ".gitignore" },
+        },
+        filesystem_watchers = {
+          enable = true,
+        },
+        update_focused_file = {
+          enable = true,
+          update_root = true,
+        },
+      })
+    end,
   },
   
   -- Syntax highlighting

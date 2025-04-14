@@ -12,9 +12,30 @@ local is_wsl = (function()
   return output:lower():match('microsoft') ~= nil or output:lower():match('wsl') ~= nil
 end)()
 
+-- Load WSL utilities early
+local wsl = nil
+if is_wsl then
+  -- Try to load the WSL module
+  local ok, wsl_module = pcall(require, 'wsl')
+  if ok then
+    wsl = wsl_module
+    -- Initialize WSL integration
+    vim.schedule(function()
+      wsl.setup()
+    end)
+    vim.notify("WSL integration module loaded", vim.log.levels.INFO)
+  else
+    vim.notify("WSL integration module failed to load: " .. tostring(wsl_module), vim.log.levels.WARN)
+  end
+end
+
 -- WSL specific settings
 local wsl_paths = {
   windows_home = (function()
+    if wsl and wsl.get_windows_home then
+      return wsl.get_windows_home()
+    end
+
     local candidates = {}
     
     -- Only add paths with non-nil environment variables
@@ -53,7 +74,21 @@ if is_wsl then
     },
     cache_enabled = 0,
   }
-  vim.notify("WSL detected - Windows clipboard integration enabled")
+  
+  -- Add autocmd to fix Windows paths when opening files
+  vim.api.nvim_create_autocmd({"BufReadCmd", "FileReadCmd"}, {
+    pattern = {"*"},
+    callback = function(ev)
+      if wsl and wsl.fix_path then
+        local fixed_path = wsl.fix_path(ev.file)
+        if fixed_path and fixed_path ~= ev.file then
+          vim.cmd("edit " .. fixed_path)
+          return true
+        end
+      end
+      return false
+    end
+  })
 end
 
 -- Create a compatibility layer for Neovim 0.9 vs 0.10+
@@ -464,18 +499,6 @@ vim.api.nvim_create_autocmd("User", {
     end
   end,
 })
-
--- Initialize WSL specific utilities
-if is_wsl then
-  -- Load and setup the WSL module (after plugins are loaded)
-  vim.api.nvim_create_autocmd("User", {
-    pattern = "LazyDone",
-    callback = function()
-      local wsl = require("wsl")
-      wsl.setup_mappings()
-    end,
-  })
-end
 
 -- Set up auto commands
 vim.api.nvim_create_autocmd("FileType", {

@@ -1,6 +1,6 @@
-# Ultimate Backend Development Neovim Configuration
+# Ultimate Backend Development Neovim Configuration for WSL
 
-A comprehensive Neovim configuration optimized for backend development and data science. This configuration combines ThePrimeagen's powerful keybindings with NvChad's simplicity for an efficient development experience with beautiful UI elements.
+A comprehensive Neovim configuration optimized for backend development and data science, specially adapted for **Windows Subsystem for Linux (WSL)**. This configuration combines ThePrimeagen's powerful keybindings with NvChad's simplicity for an efficient development experience with beautiful UI elements, plus seamless Windows integration.
 
 ![Neovim Dashboard](https://raw.githubusercontent.com/A6UD3L0/nvim-config/main/assets/dashboard.png)
 
@@ -54,6 +54,28 @@ A comprehensive Neovim configuration optimized for backend development and data 
   - File navigation with Telescope fuzzy finder
   - Undotree for change history visualization
 
+## 🔄 WSL & Windows Integration
+
+This configuration is specifically designed for use in WSL (Ubuntu) with Neovim 0.9+ and includes:
+
+- **Windows Clipboard Integration**: Seamless copy/paste between WSL and Windows
+- **Windows File System Access**: Easy navigation to Windows files via `/mnt/c/...`
+- **Windows Tools Integration**: Open files in Windows Explorer, VSCode, or PowerShell
+- **Cross-Platform Compatibility**: Neovim 0.9 compatibility with backports from 0.10
+- **MECE Keybinding Structure**: All Windows integration features have logical mappings
+- **One-Key Windows Home Access**: Quick access to your Windows user directory
+
+### WSL-Specific Keybindings
+
+| Binding           | Action                                   |
+|-------------------|------------------------------------------|
+| `<leader>wie`     | Open current file in Windows Explorer    |
+| `<leader>wic`     | Copy to Windows clipboard                |
+| `<leader>wiv`     | Open current file in VSCode              |
+| `<leader>wip`     | Open PowerShell in current directory     |
+| `<leader>wiw`     | Go to Windows user home directory        |
+| `<leader>fw`      | Browse Windows files with Telescope      |
+
 ## 📋 System Requirements
 
 - Neovim 0.9.0 or higher
@@ -63,6 +85,8 @@ A comprehensive Neovim configuration optimized for backend development and data 
 - Rust/Cargo (for language servers)
 - Ripgrep (for Telescope searches)
 - A Nerd Font (for icons)
+- WSL (Windows Subsystem for Linux) with Ubuntu
+- Windows terminal or similar for proper rendering
 
 ## ⚡ MECE Keybinding Structure
 

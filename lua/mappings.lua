@@ -1,8 +1,15 @@
 -- Seamless Neovim keybindings for backend development
 -- Combines ThePrimeagen's mappings with NvChad simplicity
+-- WSL-optimized version with Windows interoperability
 
 -- Set leader key to space
 vim.g.mapleader = " "
+
+-- Detect WSL environment
+local is_wsl = (function()
+  local output = vim.fn.system('uname -r')
+  return output:lower():match('microsoft') ~= nil or output:lower():match('wsl') ~= nil
+end)()
 
 -- Create a local mapping function to use whether or not which-key is available
 local map = vim.keymap.set
@@ -1419,6 +1426,21 @@ if pcall(require, "which-key") then
     ["<leader>u"] = { name = "+undotree" },
     ["<leader>?"] = { "Show all keymaps (cheatsheet)" },
   })
+  
+  -- WSL-specific registrations
+  if is_wsl then
+    wk.register({
+      ["<leader>fw"] = { "Browse Windows home" },
+      ["<leader>wi"] = { 
+        name = "+windows",
+        e = "Open in Windows Explorer",
+        c = "Copy to Windows clipboard",
+        v = "Open in VSCode",
+        p = "Open in PowerShell",
+        w = "Browse Windows home",
+      },
+    })
+  end
 end
 
 -- Export the module

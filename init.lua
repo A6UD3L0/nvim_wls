@@ -1,9 +1,71 @@
 -- Streamlined Neovim Configuration for Backend Development and Data Science
 -- Based on ThePrimeagen's style with NvChad simplicity
+-- WSL-optimized version (Windows Subsystem for Linux)
 
 -- Set leader key to space (must be before lazy bootstrap)
 vim.g.mapleader = " "
 vim.g.maplocalleader = " "
+
+-- Detect WSL
+local is_wsl = (function()
+  local output = vim.fn.system('uname -r')
+  return output:lower():match('microsoft') ~= nil or output:lower():match('wsl') ~= nil
+end)()
+
+-- WSL specific settings
+local wsl_paths = {
+  windows_home = (function()
+    local candidates = {
+      "/mnt/c/Users/" .. os.getenv("USER"),
+      "/mnt/c/Users/" .. os.getenv("USERNAME"),
+    }
+    
+    for _, path in ipairs(candidates) do
+      if vim.fn.isdirectory(path) == 1 then
+        return path
+      end
+    end
+    
+    return "/mnt/c/Users"
+  end)()
+}
+
+-- Setup Windows clipboard integration for WSL
+if is_wsl then
+  vim.g.clipboard = {
+    name = 'WslClipboard',
+    copy = {
+      ['+'] = 'clip.exe',
+      ['*'] = 'clip.exe',
+    },
+    paste = {
+      ['+'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+      ['*'] = 'powershell.exe -c [Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace("`r", ""))',
+    },
+    cache_enabled = 0,
+  }
+  vim.notify("WSL detected - Windows clipboard integration enabled")
+end
+
+-- Create a compatibility layer for Neovim 0.9 vs 0.10+
+local nvim_compat = {}
+-- Check if we're on Neovim 0.9 (vs 0.10+)
+nvim_compat.is_nvim_09 = (function()
+  local v = vim.version()
+  return v.major == 0 and v.minor < 10
+end)()
+
+-- Override functions that might not exist in Neovim 0.9
+if nvim_compat.is_nvim_09 then
+  -- Some Neovim 0.10+ functions don't exist in 0.9, create compatible alternatives
+  vim.api.nvim_set_hl = vim.api.nvim_set_hl or function(ns, name, val)
+    local cmd = string.format("highlight %s guifg=%s guibg=%s", name, val.fg or "NONE", val.bg or "NONE")
+    vim.cmd(cmd)
+  end
+  
+  -- Adjust setting syntax for splitkeep which doesn't exist in 0.9
+  vim.opt.splitkeep = nil
+end
 
 -- Bootstrap and configure lazy.nvim (plugin manager)
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -394,6 +456,18 @@ vim.api.nvim_create_autocmd("User", {
   end,
 })
 
+-- Initialize WSL specific utilities
+if is_wsl then
+  -- Load and setup the WSL module (after plugins are loaded)
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "LazyDone",
+    callback = function()
+      local wsl = require("wsl")
+      wsl.setup_mappings()
+    end,
+  })
+end
+
 -- Set up auto commands
 vim.api.nvim_create_autocmd("FileType", {
   pattern = { "python", "go", "c", "cpp", "sql", "dockerfile", "yaml", "json" },
@@ -482,3 +556,14 @@ vim.cmd([[
 -- Set shorter updatetime for faster response
 vim.opt.updatetime = 300
 vim.opt.timeoutlen = 500
+
+-- Notify about environment
+vim.api.nvim_create_autocmd("User", {
+  pattern = "LazyDone",
+  callback = function()
+    if is_wsl then
+      vim.notify("Neovim " .. vim.version().major .. "." .. vim.version().minor .. 
+                " running in WSL with Windows integration", vim.log.levels.INFO)
+    end
+  end,
+})

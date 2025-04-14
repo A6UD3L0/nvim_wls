@@ -24,6 +24,13 @@ if is_wsl then
       wsl.setup()
     end)
     vim.notify("WSL integration module loaded", vim.log.levels.INFO)
+    
+    -- Load Windows directory prioritization
+    pcall(function()
+      local auto_windows = require('auto_windows')
+      auto_windows.setup()
+      vim.notify("Windows directories prioritized", vim.log.levels.INFO)
+    end)
   else
     vim.notify("WSL integration module failed to load: " .. tostring(wsl_module), vim.log.levels.WARN)
   end
